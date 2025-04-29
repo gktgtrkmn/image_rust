@@ -16,8 +16,8 @@ pub struct Palette {
 
 impl Palette {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
+        let file: File = File::open(path)?;
+        let reader: BufReader<File> = BufReader::new(file);
         let palette: Palette = serde_json::from_reader(reader)?;
         Ok(palette)
     }
@@ -59,9 +59,9 @@ pub fn get_nearest_color(color: Color) -> Color {
 
         palette.iter()
             .min_by_key(|&&palette_color| {
-                let dr = palette_color.r as i32 - color.r as i32;
-                let dg = palette_color.g as i32 - color.g as i32;
-                let db = palette_color.b as i32 - color.b as i32;
+                let dr: i32 = palette_color.r as i32 - color.r as i32;
+                let dg: i32 = palette_color.g as i32 - color.g as i32;
+                let db: i32 = palette_color.b as i32 - color.b as i32;
                 dr * dr + dg * dg + db * db
             })
             .copied()
@@ -77,7 +77,7 @@ pub fn fallback_palette(input_image: &DynamicImage) -> RgbImage {
         if palette.len() > 1 {
         } else {
             drop(palette);
-                let default_colors = vec![
+                let default_colors: Vec<Color> = vec![
                 Color { r: 0, g: 0, b: 0 },       // Black
                 Color { r: 255, g: 255, b: 255 }, // White
                 Color { r: 255, g: 0, b: 0 },     // Red
@@ -94,9 +94,9 @@ pub fn fallback_palette(input_image: &DynamicImage) -> RgbImage {
     let (width, height) = input_image.dimensions();
     
     ImageBuffer::from_fn(width, height, |x, y| {
-        let pixel = input_image.get_pixel(x, y);
-        let input_color = Color { r: pixel[0], g: pixel[1], b: pixel[2] };
-        let new_color = get_nearest_color(input_color);
+        let pixel: image::Rgba<u8> = input_image.get_pixel(x, y);
+        let input_color: Color = Color { r: pixel[0], g: pixel[1], b: pixel[2] };
+        let new_color: Color = get_nearest_color(input_color);
         Rgb([new_color.r, new_color.g, new_color.b])
     })
 }
@@ -129,7 +129,7 @@ mod tests {
         let result = Palette::from_file(&test_file_path);
 
         assert!(result.is_ok());
-        let palette = result.unwrap();
+        let palette: Palette = result.unwrap();
         assert_eq!(
             palette,
             Palette {

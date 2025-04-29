@@ -1,3 +1,4 @@
-/target
-/images
-/test_files
+target/
+test_files/
+images/
+todo*
