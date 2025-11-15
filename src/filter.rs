@@ -1,7 +1,8 @@
-use image::{imageops, DynamicImage, Pixel, GenericImageView, GrayImage, ImageBuffer, Luma, Rgb, RgbImage };
-use std::f32;
 use crate::palette::*;
-
+use image::{
+    imageops, DynamicImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage,
+};
+use std::f32;
 
 #[derive(Debug, Clone, Copy)]
 pub enum FilterOperation {
@@ -22,13 +23,11 @@ impl Color {
     pub fn from_rgb_components(r: u8, g: u8, b: u8) -> Self {
         Color { r, g, b }
     }
-    
+
     pub fn from_rgb(rgb: &Rgb<u8>) -> Self {
         Self::from_rgb_components(rgb[0], rgb[1], rgb[2])
     }
-
 }
-
 
 // fn color_distance(c1: Color, c2: Color) -> f32 {
 //     let r: f32 = (c1.r as f32 - c2.r as f32).powi(2);
@@ -37,15 +36,14 @@ impl Color {
 //     (r + g + b).sqrt()
 // }
 
-pub fn save<P, Container>(output_path: &str, img: ImageBuffer<P, Container>) -> () 
-where 
+pub fn save<P, Container>(output_path: &str, img: ImageBuffer<P, Container>) -> ()
+where
     P: Pixel<Subpixel = u8> + 'static + image::PixelWithColorType,
     Container: std::ops::Deref<Target = [u8]>,
 {
     img.save(output_path).expect("Failed to save image!");
     println!("The image is saved: {}", output_path);
 }
-
 
 pub fn apply_palette(input_image: &DynamicImage, palette_path: &str) -> RgbImage {
     let (width, height) = input_image.dimensions();
@@ -58,8 +56,11 @@ pub fn apply_palette(input_image: &DynamicImage, palette_path: &str) -> RgbImage
         }
     };
 
-    println!("Palette: {}\n{}\n{:?}", palette.name, palette.description, palette.colors);
-    
+    println!(
+        "Palette: {}\n{}\n{:?}",
+        palette.name, palette.description, palette.colors
+    );
+
     let palette_colors: Vec<Rgb<u8>> = palette.get_colors();
 
     if palette_colors.is_empty() {
@@ -67,7 +68,8 @@ pub fn apply_palette(input_image: &DynamicImage, palette_path: &str) -> RgbImage
         return fallback_palette(input_image);
     }
 
-    let colors: Vec<Color> = palette_colors.iter()
+    let colors: Vec<Color> = palette_colors
+        .iter()
         .map(|rgb| Color::from_rgb(rgb))
         .collect();
 
@@ -75,14 +77,22 @@ pub fn apply_palette(input_image: &DynamicImage, palette_path: &str) -> RgbImage
 
     ImageBuffer::from_fn(width, height, |x, y| {
         let pixel: image::Rgba<u8> = input_image.get_pixel(x, y);
-        let input_color: Color = Color { r: pixel[0], g: pixel[1], b: pixel[2] };
+        let input_color: Color = Color {
+            r: pixel[0],
+            g: pixel[1],
+            b: pixel[2],
+        };
         let new_color: Color = get_nearest_color(input_color);
         Rgb([new_color.r, new_color.g, new_color.b])
     })
 }
 
 fn quantize(value: u8) -> u8 {
-    if value < 128 { 0 } else { 255 }
+    if value < 128 {
+        0
+    } else {
+        255
+    }
 }
 
 pub fn grayscale(image: &RgbImage) -> GrayImage {
@@ -97,13 +107,16 @@ pub fn grayscale(image: &RgbImage) -> GrayImage {
     gray_image
 }
 
-
 pub fn reverse(image: &DynamicImage) -> RgbImage {
     let (width, height) = image.dimensions();
 
     ImageBuffer::from_fn(width, height, |x, y| {
         let pixel: image::Rgba<u8> = image.get_pixel(x, y);
-        let new_color: Color = Color { r: 255 - pixel[0], g: 255 - pixel[1], b: 255 - pixel[2]};
+        let new_color: Color = Color {
+            r: 255 - pixel[0],
+            g: 255 - pixel[1],
+            b: 255 - pixel[2],
+        };
         Rgb([new_color.r, new_color.g, new_color.b])
     })
 }
@@ -121,27 +134,43 @@ pub fn floyd_steinberg_dithering(image: &GrayImage) -> GrayImage {
 
             if x + 1 < width {
                 let right_pixel: i16 = img.get_pixel(x + 1, y)[0] as i16;
-                img.put_pixel(x + 1, y, Luma([(right_pixel + (error * 7 / 16) as i16).clamp(0, 255) as u8]));
+                img.put_pixel(
+                    x + 1,
+                    y,
+                    Luma([(right_pixel + (error * 7 / 16) as i16).clamp(0, 255) as u8]),
+                );
             }
 
             if y + 1 < height {
                 if x > 0 {
                     let bottom_left_pixel: i16 = img.get_pixel(x - 1, y + 1)[0] as i16;
-                    img.put_pixel(x - 1, y + 1, Luma([(bottom_left_pixel + (error * 3 / 16) as i16).clamp(0, 255) as u8]));
+                    img.put_pixel(
+                        x - 1,
+                        y + 1,
+                        Luma([(bottom_left_pixel + (error * 3 / 16) as i16).clamp(0, 255) as u8]),
+                    );
                 }
 
                 let bottom_pixel: i16 = img.get_pixel(x, y + 1)[0] as i16;
-                img.put_pixel(x, y + 1, Luma([(bottom_pixel + (error * 5 / 16) as i16).clamp(0, 255) as u8]));
+                img.put_pixel(
+                    x,
+                    y + 1,
+                    Luma([(bottom_pixel + (error * 5 / 16) as i16).clamp(0, 255) as u8]),
+                );
 
                 if x + 1 < width {
                     let bottom_right_pixel = img.get_pixel(x + 1, y + 1)[0] as i16;
-                    img.put_pixel(x + 1, y + 1, Luma([(bottom_right_pixel + (error * 1 / 16) as i16).clamp(0, 255) as u8]));
+                    img.put_pixel(
+                        x + 1,
+                        y + 1,
+                        Luma([(bottom_right_pixel + (error * 1 / 16) as i16).clamp(0, 255) as u8]),
+                    );
                 }
             }
         }
     }
     img
-} 
+}
 
 pub fn apply_floyd_steinberg_dithering(image: &DynamicImage) -> GrayImage {
     let rgb_img: ImageBuffer<Rgb<u8>, Vec<u8>> = image.clone().into_rgb8();
@@ -155,6 +184,11 @@ pub fn pixelate(image: &DynamicImage, pixel_size: u32) -> RgbImage {
 
     let small_width: u32 = width / pixel_size;
     let small_height: u32 = height / pixel_size;
-    let small_img: ImageBuffer<Rgb<u8>, Vec<u8>> = imageops::resize(&rgb_img, small_width, small_height, imageops::FilterType::Nearest);
+    let small_img: ImageBuffer<Rgb<u8>, Vec<u8>> = imageops::resize(
+        &rgb_img,
+        small_width,
+        small_height,
+        imageops::FilterType::Nearest,
+    );
     imageops::resize(&small_img, width, height, imageops::FilterType::Nearest)
 }

@@ -1,11 +1,11 @@
+use crate::filter::*;
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, RgbImage};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, RgbImage};
-use crate::filter::*;
 use std::sync::RwLock;
-use once_cell::sync::Lazy;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Palette {
@@ -23,7 +23,8 @@ impl Palette {
     }
 
     pub fn get_colors(&self) -> Vec<Rgb<u8>> {
-        self.colors.iter()
+        self.colors
+            .iter()
             .map(|&[r, g, b]| Rgb([r, g, b]))
             .collect()
     }
@@ -31,14 +32,30 @@ impl Palette {
 
 static ACTIVE_PALETTE: Lazy<RwLock<Vec<Color>>> = Lazy::new(|| {
     RwLock::new(vec![
-        Color { r: 0, g: 0, b: 0 },       // Black
-        Color { r: 255, g: 255, b: 255 }, // White
-        Color { r: 255, g: 0, b: 0 },     // Red
-        Color { r: 0, g: 255, b: 0 },     // Green
-        Color { r: 0, g: 0, b: 255 },     // Blue
-        Color { r: 255, g: 255, b: 0 },   // Yellow
-        Color { r: 255, g: 0, b: 255 },   // Magenta
-        Color { r: 0, g: 255, b: 255 },   // Cyan
+        Color { r: 0, g: 0, b: 0 }, // Black
+        Color {
+            r: 255,
+            g: 255,
+            b: 255,
+        }, // White
+        Color { r: 255, g: 0, b: 0 }, // Red
+        Color { r: 0, g: 255, b: 0 }, // Green
+        Color { r: 0, g: 0, b: 255 }, // Blue
+        Color {
+            r: 255,
+            g: 255,
+            b: 0,
+        }, // Yellow
+        Color {
+            r: 255,
+            g: 0,
+            b: 255,
+        }, // Magenta
+        Color {
+            r: 0,
+            g: 255,
+            b: 255,
+        }, // Cyan
     ])
 });
 
@@ -57,7 +74,8 @@ pub fn get_nearest_color(color: Color) -> Color {
             return color;
         }
 
-        palette.iter()
+        palette
+            .iter()
             .min_by_key(|&&palette_color| {
                 let dr: i32 = palette_color.r as i32 - color.r as i32;
                 let dg: i32 = palette_color.g as i32 - color.g as i32;
@@ -77,25 +95,45 @@ pub fn fallback_palette(input_image: &DynamicImage) -> RgbImage {
         if palette.len() > 1 {
         } else {
             drop(palette);
-                let default_colors: Vec<Color> = vec![
-                Color { r: 0, g: 0, b: 0 },       // Black
-                Color { r: 255, g: 255, b: 255 }, // White
-                Color { r: 255, g: 0, b: 0 },     // Red
-                Color { r: 0, g: 255, b: 0 },     // Green
-                Color { r: 0, g: 0, b: 255 },     // Blue
-                Color { r: 255, g: 255, b: 0 },   // Yellow
-                Color { r: 255, g: 0, b: 255 },   // Magenta
-                Color { r: 0, g: 255, b: 255 },   // Cyan
+            let default_colors: Vec<Color> = vec![
+                Color { r: 0, g: 0, b: 0 }, // Black
+                Color {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                }, // White
+                Color { r: 255, g: 0, b: 0 }, // Red
+                Color { r: 0, g: 255, b: 0 }, // Green
+                Color { r: 0, g: 0, b: 255 }, // Blue
+                Color {
+                    r: 255,
+                    g: 255,
+                    b: 0,
+                }, // Yellow
+                Color {
+                    r: 255,
+                    g: 0,
+                    b: 255,
+                }, // Magenta
+                Color {
+                    r: 0,
+                    g: 255,
+                    b: 255,
+                }, // Cyan
             ];
             set_active_palette(&default_colors);
         }
     }
-    
+
     let (width, height) = input_image.dimensions();
-    
+
     ImageBuffer::from_fn(width, height, |x, y| {
         let pixel: image::Rgba<u8> = input_image.get_pixel(x, y);
-        let input_color: Color = Color { r: pixel[0], g: pixel[1], b: pixel[2] };
+        let input_color: Color = Color {
+            r: pixel[0],
+            g: pixel[1],
+            b: pixel[2],
+        };
         let new_color: Color = get_nearest_color(input_color);
         Rgb([new_color.r, new_color.g, new_color.b])
     })
@@ -104,7 +142,10 @@ pub fn fallback_palette(input_image: &DynamicImage) -> RgbImage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs::{create_dir_all, remove_file}, io::Write};
+    use std::{
+        fs::{create_dir_all, remove_file},
+        io::Write,
+    };
     #[test]
     fn write_palette_and_read() {
         let test_dir: &str = "./test_files";
@@ -124,7 +165,8 @@ mod tests {
         "#;
 
         let mut file: File = File::create(&test_file_path).expect("Failed to create test file");
-        file.write_all(mock_json.as_bytes()).expect("Failed to write to test file");
+        file.write_all(mock_json.as_bytes())
+            .expect("Failed to write to test file");
 
         let result = Palette::from_file(&test_file_path);
 
@@ -135,11 +177,7 @@ mod tests {
             Palette {
                 name: "Warm Colors".to_string(),
                 description: "A palette of warm colors".to_string(),
-                colors: vec![
-                    [255, 0, 0],
-                    [255, 165, 0],
-                    [255, 255, 0]
-                ]
+                colors: vec![[255, 0, 0], [255, 165, 0], [255, 255, 0]]
             }
         );
 
