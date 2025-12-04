@@ -1,10 +1,10 @@
 # Image-Rust
-A cli app to apply some filter algorithms on images.
+A CLI application for applying various image filter algorithms.
 ## Implemented Filters
-- Reverse
+- Reverse Colors
 - Pixelation
 - Floyd-Steinberg Dithering
-- Applying a Palette
+- Palette Application
 ## Usage
 ```
 cargo run --release -- <filter_tag_chain> <input_image_path> <output_image_path>
@@ -51,7 +51,7 @@ cargo run --release -- -pix=16 input.jpg output.jpg
   <img src="resources/output_pix_16.png"/>
 </p>
 
-First pixelate then apply palette (pix=8):
+Pixelate + Palette (pix=8):
 ```
 cargo run --release -- -pixpal input.jpg output.jpg
 ```
@@ -60,7 +60,7 @@ cargo run --release -- -pixpal input.jpg output.jpg
   <img src="resources/output_pixpal.png"/>
 </p>
 
-Chain filters:
+Chain Filters:
 ```
 cargo run --release -- -pix=16 -pal -rev -floyd input.jpg output.jpg
 ```
