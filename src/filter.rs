@@ -4,14 +4,6 @@ use image::{
 };
 use std::f32;
 
-#[derive(Debug, Clone, Copy)]
-pub enum FilterOperation {
-    Palette,
-    Pixelate(u32),
-    FloydSteinberg,
-    Reverse,
-}
-
 #[derive(Copy, Clone, Debug)]
 pub struct Color {
     pub r: u8,

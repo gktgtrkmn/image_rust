@@ -1,64 +1,74 @@
+use std::str::FromStr;
+
 use crate::filter::*;
 use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Rgb};
+use clap::Parser;
 
-pub fn apply() {
-    let args: Vec<String> = std::env::args().collect();
+#[derive(Debug, Clone, Copy)]
+pub enum FilterOperation {
+    Palette,
+    Pixelate(u32),
+    FloydSteinberg,
+    Reverse,
+}
 
-    if args.len() < 3 {
-        println!("Usage: cargo r [filter operations] input_path output_path");
-        println!("Filter operations:");
-        println!("  -pal: Apply palette described in ./palette.json");
-        println!("  -pixpal: Apply pixelation and palette");
-        println!("  -pix=N: Apply pixelation with size N (default 8)");
-        println!("  -floyd: Apply Floyd-Steinberg dithering");
-        println!("  -rev: Reverse colors");
-        println!("Example: cargo r -pal -pix=4 -floyd input.png output.png");
-        return;
-    }
+impl std::str::FromStr for FilterOperation {
+    type Err = String;
 
-    let input_path: &String = &args[args.len() - 2];
-    let output_path: &String = &args[args.len() - 1];
-    let mut operations: Vec<FilterOperation> = Vec::new();
-    for i in 1..(args.len() - 2) {
-        let arg: &String = &args[i];
-
-        if arg == "-pal" {
-            operations.push(FilterOperation::Palette);
-        } else if arg == "-pixpal" {
-            operations.push(FilterOperation::Pixelate(8));
-            operations.push(FilterOperation::Palette);
-        } else if arg == "-floyd" {
-            operations.push(FilterOperation::FloydSteinberg);
-        } else if arg.starts_with("-pix=") {
-            if let Some(size_str) = arg.strip_prefix("-pix=") {
-                if let Ok(size) = size_str.parse::<u32>() {
-                    if size != 0 {
-                        operations.push(FilterOperation::Pixelate(size));
-                    }
-                } else {
-                    println!("Invalid pixel size: {}", size_str);
-                    return;
-                }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "pal" {
+            Ok(FilterOperation::Palette)
+        } else if s == "floyd" {
+            Ok(FilterOperation::FloydSteinberg)
+        } else if s == "rev" {
+            Ok(FilterOperation::Reverse)
+        } else if let Some(size_str) = s.strip_prefix("pix=") {
+            let size = size_str.parse::<u32>()
+                .map_err(|_| format!("Invalid pixel size {}", size_str))?;
+            if size == 0 {
+                return Err("Pixel size must be greater than 0".to_string());
             }
-        } else if arg == "-pix" {
-            operations.push(FilterOperation::Pixelate(8));
-        } else if arg == "-rev" {
-            operations.push(FilterOperation::Reverse);
+            Ok(FilterOperation::Pixelate(size))
+        } else if s == "pix" {
+            Ok(FilterOperation::Pixelate(8))
         } else {
-            println!("Unknown operation: {}", arg);
-            return;
+            Err(format!("Unknown filter operation: {}", s))
         }
     }
+}
 
-    if operations.is_empty() {
-        println!("No filter operations specified!");
-        return;
-    }
+#[derive(Parser, Debug)]
+#[command(name = "image-filter")]
+#[command(about = "Apply various filters to images", long_about = None)]
+struct Args {
+    #[arg(short = 'f', long = "filter", required = true, value_delimiter = ',')]
+    filters: Vec<String>,
 
-    let mut image: DynamicImage = match image::open(input_path) {
+    #[arg(value_name = "INPUT", required = true)]
+    input_path: String,
+
+    #[arg(value_name = "OUTPUT", required = true)]
+    output_path: String,
+}
+
+pub fn apply() {
+    let args = Args::parse();
+
+    let operations: Vec<FilterOperation> = match args.filters.iter()
+        .map(|s| FilterOperation::from_str(s))
+        .collect::<Result<Vec<_>, _>>() {
+            Ok(ops) => ops,
+            Err(e) => {
+                eprintln!("Error {e}");
+                return;
+            }
+        };
+
+
+    let mut image: DynamicImage = match image::open(&args.input_path) {
         Ok(img) => img,
         Err(e) => {
-            println!("Failed to load image {}: {}", input_path, e);
+            println!("Failed to load image {}: {}", args.input_path, e);
             return;
         }
     };
@@ -106,11 +116,11 @@ pub fn apply() {
     }
 
     if let Some(gray_image) = gray_image_option {
-        save(output_path, gray_image);
+        save(&args.output_path, gray_image);
     } else {
-        match image.save(output_path) {
-            Ok(_) => println!("The image is saved: {}", output_path),
-            Err(e) => println!("Failed to save image {}: {}", output_path, e),
+        match image.save(&args.output_path) {
+            Ok(_) => println!("The image is saved: {}", args.output_path),
+            Err(e) => println!("Failed to save image {}: {}", args.output_path, e),
         }
     }
 }
