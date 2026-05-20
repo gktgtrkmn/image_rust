@@ -3,3 +3,4 @@ test_files/
 images/
 todo*
 .direnv/
+.DS_Store
